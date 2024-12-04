@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import {
   FaPencilAlt,
   FaMicrophone,
@@ -9,24 +9,23 @@ import {
   FaStop,
   FaPlay,
   FaUpload,
+  FaPaperPlane,
 } from "react-icons/fa";
-import Image from "next/image";
 
 export default function Home() {
-  const [activeInput, setActiveInput] = useState<
-    "text" | "audio" | "video" | null
-  >(null);
+  const [activeInput, setActiveInput] = useState<"text" | "audio" | "video" | null>(
+    null
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 flex flex-col items-center p-8">
       <header className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-gray-800 mb-2">psychiatrai</h1>
+        <h1 className="text-4xl font-bold text-gray-800 mb-2">Psychiatrai</h1>
         <p className="text-lg text-gray-600">
-          Welcome to PsychiatraiBot your trusted companion for mental health and
+          Welcome to PsychiatraiBot, your trusted companion for mental health and
           well-being support!
         </p>
       </header>
-      
 
       <main className="w-full max-w-3xl bg-white shadow-lg p-8 rounded-3xl">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 text-gray-800">
@@ -99,26 +98,51 @@ const Card = ({
 // TextInput Component
 const TextInput = () => {
   const [text, setText] = useState("");
+  const [messages, setMessages] = useState<string[]>([]);
+  const [isMultiline, setIsMultiline] = useState(false);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.shiftKey && e.key === "Enter") {
+      setIsMultiline(true);
+    } else if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
   const handleSubmit = () => {
-    if (text.trim()) alert(`Your input: ${text}`);
-    setText("");
+    if (text.trim()) {
+      setMessages([...messages, text]);
+      setText("");
+      setIsMultiline(false);
+    }
   };
 
   return (
-    <div className="flex flex-col gap-4 items-center">
-      <textarea
-        rows={4}
-        className="w-full border rounded-lg p-4 bg-white text-black shadow-sm focus:ring-2 focus:ring-blue-400 focus:outline-none"
-        placeholder="Type here..."
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-      />
-      <button
-        onClick={handleSubmit}
-        className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all"
-      >
-        Submit
-      </button>
+    <div className="flex flex-col gap-4 items-center w-full">
+      <div className="flex flex-col space-y-4 w-full">
+        {messages.map((msg, index) => (
+          <div key={index} className="p-4 bg-gray-100 rounded-lg w-full">
+            <p>{msg}</p>
+          </div>
+        ))}
+      </div>
+      <div className="relative w-full">
+        <textarea
+          rows={isMultiline ? 4 : 1}
+          className="w-full border rounded-lg p-4 bg-white text-black shadow-sm focus:ring-2 focus:ring-blue-400 focus:outline-none resize-none"
+          placeholder="Type here..."
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={handleKeyDown}
+        />
+        <button
+          onClick={handleSubmit}
+          className="absolute right-4 bottom-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all flex items-center justify-center"
+        >
+          <FaPaperPlane className="text-xl" />
+        </button>
+      </div>
     </div>
   );
 };
@@ -147,7 +171,7 @@ const AudioRecorder = () => {
 
     recorder.start();
     setRecording(true);
-    setMessage("Someone is speaking");
+    setMessage("Recording...");
     setMediaRecorder(recorder);
   };
 
@@ -171,26 +195,28 @@ const AudioRecorder = () => {
   return (
     <div className="text-center justify-center items-center">
       {message && <p className="text-red-500 mb-4">{message}</p>}
-      {recording ? (
-        <button
-          onClick={stopRecording}
-          className="px-6 py-3 m-6 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all flex items-center"
-        >
-          <FaStop className="mr-2" /> Stop Recording
-        </button>
-      ) : (
-        <button
-          onClick={startRecording}
-          className="px-6 py-3 bg-green-500  text-white rounded-lg hover:bg-green-600 transition-all flex items-center"
-        >
-          <FaPlay className="mr-2" /> Start Recording
-        </button>
-      )}
+      <div className="flex justify-center items-center space-x-4">
+        {recording ? (
+          <button
+            onClick={stopRecording}
+            className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all flex items-center"
+          >
+            <FaStop className="mr-2" /> Stop Recording
+          </button>
+        ) : (
+          <button
+            onClick={startRecording}
+            className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all flex items-center"
+          >
+            <FaPlay className="mr-2" /> Start Recording
+          </button>
+        )}
+      </div>
 
       {audioBlob && (
         <button
           onClick={handleUpload}
-          className="mt-4 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all flex items-center"
+          className="mt-4 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all flex items-center justify-center"
         >
           <FaUpload className="mr-2" /> {sendButtonText}
         </button>
@@ -248,27 +274,29 @@ const VideoRecorder = () => {
 
   return (
     <div className="text-center">
-      <video ref={videoRef} autoPlay playsInline className="mb-4 rounded-lg" />
-      {recording ? (
-        <button
-          onClick={stopRecording}
-          className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all flex items-center"
-        >
-          <FaStop className="mr-2" /> Stop Recording
-        </button>
-      ) : (
-        <button
-          onClick={startRecording}
-          className="px-6 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all flex items-center"
-        >
-          <FaPlay className="mr-2" /> Start Recording
-        </button>
-      )}
+      <video ref={videoRef} autoPlay className="mb-4 w-full h-auto"></video>
+      <div className="flex justify-center items-center space-x-4">
+        {recording ? (
+          <button
+            onClick={stopRecording}
+            className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all flex items-center"
+          >
+            <FaStop className="mr-2" /> Stop Recording
+          </button>
+        ) : (
+          <button
+            onClick={startRecording}
+            className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all flex items-center"
+          >
+            <FaPlay className="mr-2" /> Start Recording
+          </button>
+        )}
+      </div>
 
       {videoBlob && (
         <button
           onClick={handleUpload}
-          className="mt-4 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all flex items-center"
+          className="mt-4 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all flex items-center justify-center"
         >
           <FaUpload className="mr-2" /> {sendButtonText}
         </button>
