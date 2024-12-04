@@ -13,17 +13,17 @@ import {
 } from "react-icons/fa";
 
 export default function Home() {
-  const [activeInput, setActiveInput] = useState<"text" | "audio" | "video" | null>(
-    null
-  );
+  const [activeInput, setActiveInput] = useState<
+    "text" | "audio" | "video" | null
+  >(null);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 flex flex-col items-center p-8">
       <header className="text-center mb-8">
         <h1 className="text-4xl font-bold text-gray-800 mb-2">Psychiatrai</h1>
         <p className="text-lg text-gray-600">
-          Welcome to PsychiatraiBot, your trusted companion for mental health and
-          well-being support!
+          Welcome to PsychiatraiBot, your trusted companion for mental health
+          and well-being support!
         </p>
       </header>
 
@@ -86,7 +86,7 @@ const Card = ({
   <div
     onClick={onClick}
     className={`flex flex-col items-center justify-center gap-2 p-6 rounded-3xl cursor-pointer transition-all shadow-md ${
-      isActive ? "bg-blue-500 text-white" : "bg-gray-50 hover:shadow-lg"
+      isActive ? "bg-blue-700 text-white" : "bg-gray-50 hover:shadow-lg"
     }`}
   >
     <span className="text-4xl">{icon}</span>
@@ -95,11 +95,12 @@ const Card = ({
   </div>
 );
 
-// TextInput Component
 const TextInput = () => {
   const [text, setText] = useState("");
-  const [messages, setMessages] = useState<string[]>([]);
   const [isMultiline, setIsMultiline] = useState(false);
+  const [messages, setMessages] = useState<
+    { type: "user" | "bot"; content: string }[]
+  >([]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.shiftKey && e.key === "Enter") {
@@ -112,7 +113,18 @@ const TextInput = () => {
 
   const handleSubmit = () => {
     if (text.trim()) {
-      setMessages([...messages, text]);
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { type: "user", content: text },
+      ]);
+
+      setTimeout(() => {
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          { type: "bot", content: "This is a sample response." },
+        ]);
+      }, 1000);
+
       setText("");
       setIsMultiline(false);
     }
@@ -122,11 +134,19 @@ const TextInput = () => {
     <div className="flex flex-col gap-4 items-center w-full">
       <div className="flex flex-col space-y-4 w-full">
         {messages.map((msg, index) => (
-          <div key={index} className="p-4 bg-gray-100 rounded-lg w-full">
-            <p>{msg}</p>
+          <div
+            key={index}
+            className={`p-2 rounded-2xl w-max max-w-xs ${
+              msg.type === "user"
+                ? "bg-blue-500 text-white self-end"
+                : "bg-gray-300 text-black self-start"
+            }`}
+          >
+            <p>{msg.content}</p>
           </div>
         ))}
       </div>
+
       <div className="relative w-full">
         <textarea
           rows={isMultiline ? 4 : 1}
@@ -147,7 +167,7 @@ const TextInput = () => {
   );
 };
 
-// AudioRecorder Component
+ 
 const AudioRecorder = () => {
   const [recording, setRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
@@ -225,7 +245,6 @@ const AudioRecorder = () => {
   );
 };
 
-// VideoRecorder Component
 const VideoRecorder = () => {
   const [recording, setRecording] = useState(false);
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
