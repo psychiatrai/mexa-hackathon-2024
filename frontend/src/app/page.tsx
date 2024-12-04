@@ -1,21 +1,35 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-'use client';
+"use client";
 
 import { useState, useRef, useEffect } from "react";
-import { FaPencilAlt, FaMicrophone, FaVideo, FaStop, FaPlay, FaUpload } from 'react-icons/fa';
+import {
+  FaPencilAlt,
+  FaMicrophone,
+  FaVideo,
+  FaStop,
+  FaPlay,
+  FaUpload,
+} from "react-icons/fa";
+import Image from "next/image";
 
 export default function Home() {
-  const [activeInput, setActiveInput] = useState<"text" | "audio" | "video" | null>(null);
+  const [activeInput, setActiveInput] = useState<
+    "text" | "audio" | "video" | null
+  >(null);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 flex flex-col items-center p-8">
       <header className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-gray-800 mb-2">Hello there!</h1>
-        <p className="text-lg text-gray-600">How are you feeling today?</p>
+        <h1 className="text-4xl font-bold text-gray-800 mb-2">psychiatrai</h1>
+        <p className="text-lg text-gray-600">
+          Welcome to PsychiatraiBot your trusted companion for mental health and
+          well-being support!
+        </p>
       </header>
+      
 
       <main className="w-full max-w-3xl bg-white shadow-lg p-8 rounded-3xl">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 text-gray-800">
           <Card
             icon={<FaPencilAlt />}
             title="Text Input"
@@ -94,7 +108,7 @@ const TextInput = () => {
     <div className="flex flex-col gap-4 items-center">
       <textarea
         rows={4}
-        className="w-full border rounded-lg p-4 shadow-sm focus:ring-2 focus:ring-blue-400 focus:outline-none"
+        className="w-full border rounded-lg p-4 bg-white text-black shadow-sm focus:ring-2 focus:ring-blue-400 focus:outline-none"
         placeholder="Type here..."
         value={text}
         onChange={(e) => setText(e.target.value)}
@@ -113,7 +127,9 @@ const TextInput = () => {
 const AudioRecorder = () => {
   const [recording, setRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(
+    null
+  );
   const [message, setMessage] = useState("");
   const [sendButtonText, setSendButtonText] = useState("Send Audio");
 
@@ -153,7 +169,7 @@ const AudioRecorder = () => {
   };
 
   return (
-    <div className="text-center">
+    <div className="text-center justify-center items-center">
       {message && <p className="text-red-500 mb-4">{message}</p>}
       {recording ? (
         <button
@@ -165,7 +181,7 @@ const AudioRecorder = () => {
       ) : (
         <button
           onClick={startRecording}
-          className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all flex items-center"
+          className="px-6 py-3 bg-green-500  text-white rounded-lg hover:bg-green-600 transition-all flex items-center"
         >
           <FaPlay className="mr-2" /> Start Recording
         </button>
@@ -187,7 +203,9 @@ const AudioRecorder = () => {
 const VideoRecorder = () => {
   const [recording, setRecording] = useState(false);
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(
+    null
+  );
   const [sendButtonText, setSendButtonText] = useState("Send Video");
   const videoRef = useRef<HTMLVideoElement>(null);
 
