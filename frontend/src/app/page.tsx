@@ -167,15 +167,93 @@ const TextInput = () => {
   );
 };
 
- 
+// const AudioRecorder = () => {
+//   const [recording, setRecording] = useState(false);
+//   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+//   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(
+//     null
+//   );
+//   const [message, setMessage] = useState("");
+//   const [sendButtonText, setSendButtonText] = useState("Send Audio");
+
+//   const startRecording = async () => {
+//     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+//     const recorder = new MediaRecorder(stream);
+//     const chunks: Blob[] = [];
+
+//     recorder.ondataavailable = (e) => chunks.push(e.data);
+//     recorder.onstop = () => {
+//       const audioData = new Blob(chunks, { type: "audio/webm" });
+//       setAudioBlob(audioData);
+//       setSendButtonText("Send");
+//     };
+
+//     recorder.start();
+//     setRecording(true);
+//     setMessage("Recording...");
+//     setMediaRecorder(recorder);
+//   };
+
+//   const stopRecording = () => {
+//     if (mediaRecorder) {
+//       mediaRecorder.stop();
+//       setRecording(false);
+//       setMessage("");
+//     }
+//   };
+
+//   const handleUpload = async () => {
+//     if (audioBlob) {
+//       const formData = new FormData();
+//       formData.append("audio", audioBlob, "audio_recording.webm");
+
+//       alert("Audio data sent to the server!");
+//     }
+//   };
+
+//   return (
+//     <div className="text-center justify-center items-center">
+//       {message && <p className="text-red-500 mb-4">{message}</p>}
+//       <div className="flex justify-center items-center space-x-4">
+//         {recording ? (
+//           <button
+//             onClick={stopRecording}
+//             className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all flex items-center"
+//           >
+//             <FaStop className="mr-2" /> Stop Recording
+//           </button>
+//         ) : (
+//           <button
+//             onClick={startRecording}
+//             className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all flex items-center"
+//           >
+//             <FaPlay className="mr-2" /> Start Recording
+//           </button>
+//         )}
+//       </div>
+
+//       {audioBlob && (
+//         <button
+//           onClick={handleUpload}
+//           className="mt-4 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all flex items-center justify-center"
+//         >
+//           <FaUpload className="mr-2" /> {sendButtonText}
+//         </button>
+//       )}
+//     </div>
+//   );
+// };
+
 const AudioRecorder = () => {
   const [recording, setRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(
     null
   );
+  const [conversation, setConversation] = useState<
+    Array<{ type: "audio" | "text"; content: any }>
+  >([]);
   const [message, setMessage] = useState("");
-  const [sendButtonText, setSendButtonText] = useState("Send Audio");
 
   const startRecording = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -186,7 +264,6 @@ const AudioRecorder = () => {
     recorder.onstop = () => {
       const audioData = new Blob(chunks, { type: "audio/webm" });
       setAudioBlob(audioData);
-      setSendButtonText("Send");
     };
 
     recorder.start();
@@ -205,16 +282,72 @@ const AudioRecorder = () => {
 
   const handleUpload = async () => {
     if (audioBlob) {
+      setConversation((prev) => [
+        ...prev,
+        { type: "audio", content: audioBlob },
+      ]);
+
       const formData = new FormData();
       formData.append("audio", audioBlob, "audio_recording.webm");
 
-      alert("Audio data sent to the server!");
+      try {
+        const response = await fetch("/api/gemini", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to send audio");
+        }
+
+        const data = await response.json();
+        const textResponse = data.textResponse || "No response received.";
+
+        // Add response to conversation
+        setConversation((prev) => [
+          ...prev,
+          { type: "text", content: textResponse },
+        ]);
+      } catch (error) {
+        console.error("Error uploading audio:", error);
+        setConversation((prev) => [
+          ...prev,
+          { type: "text", content: "Error: Unable to process audio." },
+        ]);
+      } finally {
+        // Reset audioBlob to allow another recording
+        setAudioBlob(null);
+      }
     }
   };
 
   return (
     <div className="text-center justify-center items-center">
-      {message && <p className="text-red-500 mb-4">{message}</p>}
+      <div className="mb-4">
+        <h2 className="text-lg font-bold">Chat with Audio Input</h2>
+        <div className="border border-gray-300 rounded-md p-4 h-64 overflow-y-scroll bg-gray-50">
+          {conversation.map((item, index) => (
+            <div key={index} className="mb-2">
+              {item.type === "audio" ? (
+                <div className="flex items-center">
+                  <p className="text-sm font-medium text-gray-600 mr-2 self-end">
+                    You (Audio):
+                  </p>
+                  <audio controls src={URL.createObjectURL(item.content)} />
+                </div>
+              ) : (
+                <div className="flex items-center">
+                  <p className="text-sm font-medium  text-blue-600 mr-2 self-start">
+                    Bot:
+                  </p>
+                  <p className="text-sm text-black">{item.content}</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="flex justify-center items-center space-x-4">
         {recording ? (
           <button
@@ -238,12 +371,92 @@ const AudioRecorder = () => {
           onClick={handleUpload}
           className="mt-4 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all flex items-center justify-center"
         >
-          <FaUpload className="mr-2" /> {sendButtonText}
+          <FaUpload className="mr-2" /> Send Audio
         </button>
       )}
     </div>
   );
 };
+
+// const VideoRecorder = () => {
+//   const [recording, setRecording] = useState(false);
+//   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
+//   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(
+//     null
+//   );
+//   const [sendButtonText, setSendButtonText] = useState("Send Video");
+//   const videoRef = useRef<HTMLVideoElement>(null);
+
+//   const startRecording = async () => {
+//     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+//     const recorder = new MediaRecorder(stream);
+//     const chunks: Blob[] = [];
+
+//     if (videoRef.current) {
+//       videoRef.current.srcObject = stream;
+//     }
+
+//     recorder.ondataavailable = (e) => chunks.push(e.data);
+//     recorder.onstop = () => {
+//       const videoData = new Blob(chunks, { type: "video/webm" });
+//       setVideoBlob(videoData);
+//       setSendButtonText("Send");
+//     };
+
+//     recorder.start();
+//     setRecording(true);
+//     setMediaRecorder(recorder);
+//   };
+
+//   const stopRecording = () => {
+//     if (mediaRecorder) {
+//       mediaRecorder.stop();
+//       setRecording(false);
+//     }
+//   };
+
+//   const handleUpload = async () => {
+//     if (videoBlob) {
+//       const formData = new FormData();
+//       formData.append("video", videoBlob, "video_recording.webm");
+
+//       alert("Video data sent to the server!");
+//     }
+//   };
+
+//   return (
+//     <div className="text-center">
+//       <video ref={videoRef} autoPlay className="mb-4 w-full h-auto"></video>
+//       <div className="flex justify-center items-center space-x-4">
+//         {recording ? (
+//           <button
+//             onClick={stopRecording}
+//             className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all flex items-center"
+//           >
+//             <FaStop className="mr-2" /> Stop Recording
+//           </button>
+//         ) : (
+//           <button
+//             onClick={startRecording}
+//             className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all flex items-center"
+//           >
+//             <FaPlay className="mr-2" /> Start Recording
+//           </button>
+//         )}
+//       </div>
+
+//       {videoBlob && (
+//         <button
+//           onClick={handleUpload}
+//           className="mt-4 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all flex items-center justify-center"
+//         >
+//           <FaUpload className="mr-2" /> {sendButtonText}
+//         </button>
+//       )}
+//     </div>
+//   );
+// };
+
 
 const VideoRecorder = () => {
   const [recording, setRecording] = useState(false);
@@ -251,7 +464,9 @@ const VideoRecorder = () => {
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(
     null
   );
-  const [sendButtonText, setSendButtonText] = useState("Send Video");
+  const [conversation, setConversation] = useState<
+    Array<{ type: "video" | "text"; content: any }>
+  >([]);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const startRecording = async () => {
@@ -267,7 +482,6 @@ const VideoRecorder = () => {
     recorder.onstop = () => {
       const videoData = new Blob(chunks, { type: "video/webm" });
       setVideoBlob(videoData);
-      setSendButtonText("Send");
     };
 
     recorder.start();
@@ -279,21 +493,92 @@ const VideoRecorder = () => {
     if (mediaRecorder) {
       mediaRecorder.stop();
       setRecording(false);
+      if (videoRef.current) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        const tracks = stream.getTracks();
+        tracks.forEach((track) => track.stop());
+        videoRef.current.srcObject = null;
+      }
     }
   };
 
   const handleUpload = async () => {
     if (videoBlob) {
+      // Add video to conversation
+      setConversation((prev) => [
+        ...prev,
+        { type: "video", content: videoBlob },
+      ]);
+
       const formData = new FormData();
       formData.append("video", videoBlob, "video_recording.webm");
 
-      alert("Video data sent to the server!");
+      try {
+        const response = await fetch("/api/gemini", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to send video");
+        }
+
+        const data = await response.json();
+        const textResponse = data.textResponse || "No response received.";
+
+        // Add bot response to conversation
+        setConversation((prev) => [
+          ...prev,
+          { type: "text", content: textResponse },
+        ]);
+      } catch (error) {
+        console.error("Error uploading video:", error);
+        setConversation((prev) => [
+          ...prev,
+          { type: "text", content: "Error: Unable to process video." },
+        ]);
+      } finally {
+        // Reset videoBlob to allow another recording
+        setVideoBlob(null);
+      }
     }
   };
 
   return (
     <div className="text-center">
-      <video ref={videoRef} autoPlay className="mb-4 w-full h-auto"></video>
+      <div className="mb-4">
+        <h2 className="text-lg font-bold">Chat with Video Input</h2>
+        <div className="border border-gray-300 rounded-md p-4 h-64 overflow-y-scroll bg-gray-50">
+          {conversation.map((item, index) => (
+            <div key={index} className="mb-2">
+              {item.type === "video" ? (
+                <div className="flex items-center">
+                  <p className="text-lg font-medium text-gray-600 mr-2">
+                    You (Video):
+                  </p>
+                  <video
+                    controls
+                    className="w-48 h-auto"
+                    src={URL.createObjectURL(item.content)}
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center">
+                  <p className="text-sm font-medium text-blue-600 mr-2">Bot:</p>
+                  <p className="text-lg text-black">{item.content}</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <video
+        ref={videoRef}
+        autoPlay
+        className="mb-4 w-full h-auto bg-black"
+      ></video>
+
       <div className="flex justify-center items-center space-x-4">
         {recording ? (
           <button
@@ -317,7 +602,7 @@ const VideoRecorder = () => {
           onClick={handleUpload}
           className="mt-4 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all flex items-center justify-center"
         >
-          <FaUpload className="mr-2" /> {sendButtonText}
+          <FaUpload className="mr-2" /> Send Video
         </button>
       )}
     </div>
