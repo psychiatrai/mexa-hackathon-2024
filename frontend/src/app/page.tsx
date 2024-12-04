@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
@@ -10,6 +11,7 @@ import {
   FaPlay,
   FaUpload,
   FaPaperPlane,
+  FaSpinner,
 } from "react-icons/fa";
 
 export default function Home() {
@@ -95,12 +97,19 @@ const Card = ({
   </div>
 );
 
-const TextInput = () => {
-  const [text, setText] = useState("");
-  const [isMultiline, setIsMultiline] = useState(false);
-  const [messages, setMessages] = useState<
-    { type: "user" | "bot"; content: string }[]
-  >([]);
+interface Message {
+  type: "user" | "bot";
+  content: string;
+  analysis?: string;
+}
+
+type ConversationItem = Message | { type: "audio" | "video" | "text"; content: any };
+
+const TextInput: React.FC = () => {
+  const [text, setText] = useState<string>("");
+  const [isMultiline, setIsMultiline] = useState<boolean>(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.shiftKey && e.key === "Enter") {
@@ -111,22 +120,78 @@ const TextInput = () => {
     }
   };
 
-  const handleSubmit = () => {
-    if (text.trim()) {
+  const handleSubmit = async () => {
+    if (!text.trim()) {
       setMessages((prevMessages) => [
         ...prevMessages,
-        { type: "user", content: text },
+        { type: "bot", content: "Please enter some text." },
       ]);
+      return;
+    }
 
-      setTimeout(() => {
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      { type: "user", content: text },
+    ]);
+
+    setText("");
+    setIsMultiline(false);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("http://localhost:8000/api/receive_input", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          type: "text",
+          text_content: text,
+          session_id: "unique_session_id",
+          message_number: `${messages.length + 1}`,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch response from the server.");
+      }
+
+      const data = await response.json();
+
+      const botResponse: Message = {
+        type: "bot",
+        content: data.generated_followup_question,
+        analysis: data.generated_analysis,
+      };
+
+      setMessages((prevMessages) => [...prevMessages, botResponse]);
+
+      if (data.terminate_chat) {
+        const diagnosisMessage: Message = {
+          type: "bot",
+          content: `Diagnosis: ${data.diagnosis || "No Diagnosis"}`,
+        };
+        const questionnaireMessage: Message = {
+          type: "bot",
+          content: `Selected Questionnaire: ${
+            data.selected_questionnaire || "None"
+          }`,
+        };
         setMessages((prevMessages) => [
           ...prevMessages,
-          { type: "bot", content: "This is a sample response." },
+          diagnosisMessage,
+          questionnaireMessage,
         ]);
-      }, 1000);
-
-      setText("");
-      setIsMultiline(false);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { type: "bot", content: "Error: Unable to process your input. Please try again." },
+      ]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -143,6 +208,11 @@ const TextInput = () => {
             }`}
           >
             <p>{msg.content}</p>
+            {msg.analysis && (
+              <p className="mt-2 text-xs italic text-gray-600">
+                Analysis: {msg.analysis}
+              </p>
+            )}
           </div>
         ))}
       </div>
@@ -155,105 +225,33 @@ const TextInput = () => {
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
+          disabled={isLoading}
+          aria-label="Text input"
         />
         <button
           onClick={handleSubmit}
-          className="absolute right-4 bottom-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all flex items-center justify-center"
+          disabled={isLoading}
+          className={`absolute right-4 bottom-4 px-4 py-2 rounded-lg flex items-center justify-center transition-all ${
+            isLoading
+              ? "bg-gray-500 cursor-not-allowed"
+              : "bg-blue-500 text-white hover:bg-blue-600"
+          }`}
+          aria-label="Send message"
         >
-          <FaPaperPlane className="text-xl" />
+          {isLoading ? <FaSpinner className="animate-spin" /> : <FaPaperPlane className="text-xl" />}
         </button>
       </div>
     </div>
   );
 };
 
-// const AudioRecorder = () => {
-//   const [recording, setRecording] = useState(false);
-//   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-//   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(
-//     null
-//   );
-//   const [message, setMessage] = useState("");
-//   const [sendButtonText, setSendButtonText] = useState("Send Audio");
-
-//   const startRecording = async () => {
-//     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-//     const recorder = new MediaRecorder(stream);
-//     const chunks: Blob[] = [];
-
-//     recorder.ondataavailable = (e) => chunks.push(e.data);
-//     recorder.onstop = () => {
-//       const audioData = new Blob(chunks, { type: "audio/webm" });
-//       setAudioBlob(audioData);
-//       setSendButtonText("Send");
-//     };
-
-//     recorder.start();
-//     setRecording(true);
-//     setMessage("Recording...");
-//     setMediaRecorder(recorder);
-//   };
-
-//   const stopRecording = () => {
-//     if (mediaRecorder) {
-//       mediaRecorder.stop();
-//       setRecording(false);
-//       setMessage("");
-//     }
-//   };
-
-//   const handleUpload = async () => {
-//     if (audioBlob) {
-//       const formData = new FormData();
-//       formData.append("audio", audioBlob, "audio_recording.webm");
-
-//       alert("Audio data sent to the server!");
-//     }
-//   };
-
-//   return (
-//     <div className="text-center justify-center items-center">
-//       {message && <p className="text-red-500 mb-4">{message}</p>}
-//       <div className="flex justify-center items-center space-x-4">
-//         {recording ? (
-//           <button
-//             onClick={stopRecording}
-//             className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all flex items-center"
-//           >
-//             <FaStop className="mr-2" /> Stop Recording
-//           </button>
-//         ) : (
-//           <button
-//             onClick={startRecording}
-//             className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all flex items-center"
-//           >
-//             <FaPlay className="mr-2" /> Start Recording
-//           </button>
-//         )}
-//       </div>
-
-//       {audioBlob && (
-//         <button
-//           onClick={handleUpload}
-//           className="mt-4 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all flex items-center justify-center"
-//         >
-//           <FaUpload className="mr-2" /> {sendButtonText}
-//         </button>
-//       )}
-//     </div>
-//   );
-// };
-
 const AudioRecorder = () => {
   const [recording, setRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(
-    null
-  );
-  const [conversation, setConversation] = useState<
-    Array<{ type: "audio" | "text"; content: any }>
-  >([]);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [conversation, setConversation] = useState<ConversationItem[]>([]);
   const [message, setMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const startRecording = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -282,16 +280,20 @@ const AudioRecorder = () => {
 
   const handleUpload = async () => {
     if (audioBlob) {
+      setIsLoading(true);
       setConversation((prev) => [
         ...prev,
         { type: "audio", content: audioBlob },
       ]);
 
       const formData = new FormData();
-      formData.append("audio", audioBlob, "audio_recording.webm");
+      formData.append("file_content", audioBlob, "audio_recording.webm");
+      formData.append("type", "audio");
+      formData.append("session_id", "unique_session_id");
+      formData.append("message_number", `${conversation.length + 1}`);
 
       try {
-        const response = await fetch("/api/gemini", {
+        const response = await fetch("http://localhost:8000/api/receive_input", {
           method: "POST",
           body: formData,
         });
@@ -301,22 +303,39 @@ const AudioRecorder = () => {
         }
 
         const data = await response.json();
-        const textResponse = data.textResponse || "No response received.";
+        const textResponse = data.generated_followup_question || "No response received.";
 
-        // Add response to conversation
         setConversation((prev) => [
           ...prev,
-          { type: "text", content: textResponse },
+          { type: "bot", content: textResponse },
         ]);
+
+        if (data.terminate_chat) {
+          const diagnosisMessage: Message = {
+            type: "bot",
+            content: `Diagnosis: ${data.diagnosis || "No Diagnosis"}`,
+          };
+          const questionnaireMessage: Message = {
+            type: "bot",
+            content: `Selected Questionnaire: ${
+              data.selected_questionnaire || "None"
+            }`,
+          };
+          setConversation((prev) => [
+            ...prev,
+            diagnosisMessage,
+            questionnaireMessage,
+          ]);
+        }
       } catch (error) {
         console.error("Error uploading audio:", error);
         setConversation((prev) => [
           ...prev,
-          { type: "text", content: "Error: Unable to process audio." },
+          { type: "bot", content: "Error: Unable to process audio. Please try again." },
         ]);
       } finally {
-        // Reset audioBlob to allow another recording
         setAudioBlob(null);
+        setIsLoading(false);
       }
     }
   };
@@ -337,7 +356,7 @@ const AudioRecorder = () => {
                 </div>
               ) : (
                 <div className="flex items-center">
-                  <p className="text-sm font-medium  text-blue-600 mr-2 self-start">
+                  <p className="text-sm font-medium text-blue-600 mr-2 self-start">
                     Bot:
                   </p>
                   <p className="text-sm text-black">{item.content}</p>
@@ -353,6 +372,7 @@ const AudioRecorder = () => {
           <button
             onClick={stopRecording}
             className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all flex items-center"
+            aria-label="Stop recording"
           >
             <FaStop className="mr-2" /> Stop Recording
           </button>
@@ -360,6 +380,7 @@ const AudioRecorder = () => {
           <button
             onClick={startRecording}
             className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all flex items-center"
+            aria-label="Start recording"
           >
             <FaPlay className="mr-2" /> Start Recording
           </button>
@@ -370,104 +391,23 @@ const AudioRecorder = () => {
         <button
           onClick={handleUpload}
           className="mt-4 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all flex items-center justify-center"
+          aria-label="Send audio"
+          disabled={isLoading}
         >
-          <FaUpload className="mr-2" /> Send Audio
+          {isLoading ? <FaSpinner className="animate-spin" /> : <FaUpload className="mr-2" />} Send Audio
         </button>
       )}
     </div>
   );
 };
 
-// const VideoRecorder = () => {
-//   const [recording, setRecording] = useState(false);
-//   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
-//   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(
-//     null
-//   );
-//   const [sendButtonText, setSendButtonText] = useState("Send Video");
-//   const videoRef = useRef<HTMLVideoElement>(null);
-
-//   const startRecording = async () => {
-//     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-//     const recorder = new MediaRecorder(stream);
-//     const chunks: Blob[] = [];
-
-//     if (videoRef.current) {
-//       videoRef.current.srcObject = stream;
-//     }
-
-//     recorder.ondataavailable = (e) => chunks.push(e.data);
-//     recorder.onstop = () => {
-//       const videoData = new Blob(chunks, { type: "video/webm" });
-//       setVideoBlob(videoData);
-//       setSendButtonText("Send");
-//     };
-
-//     recorder.start();
-//     setRecording(true);
-//     setMediaRecorder(recorder);
-//   };
-
-//   const stopRecording = () => {
-//     if (mediaRecorder) {
-//       mediaRecorder.stop();
-//       setRecording(false);
-//     }
-//   };
-
-//   const handleUpload = async () => {
-//     if (videoBlob) {
-//       const formData = new FormData();
-//       formData.append("video", videoBlob, "video_recording.webm");
-
-//       alert("Video data sent to the server!");
-//     }
-//   };
-
-//   return (
-//     <div className="text-center">
-//       <video ref={videoRef} autoPlay className="mb-4 w-full h-auto"></video>
-//       <div className="flex justify-center items-center space-x-4">
-//         {recording ? (
-//           <button
-//             onClick={stopRecording}
-//             className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all flex items-center"
-//           >
-//             <FaStop className="mr-2" /> Stop Recording
-//           </button>
-//         ) : (
-//           <button
-//             onClick={startRecording}
-//             className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all flex items-center"
-//           >
-//             <FaPlay className="mr-2" /> Start Recording
-//           </button>
-//         )}
-//       </div>
-
-//       {videoBlob && (
-//         <button
-//           onClick={handleUpload}
-//           className="mt-4 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all flex items-center justify-center"
-//         >
-//           <FaUpload className="mr-2" /> {sendButtonText}
-//         </button>
-//       )}
-//     </div>
-//   );
-// };
-
-
 const VideoRecorder = () => {
   const [recording, setRecording] = useState(false);
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(
-    null
-  );
-  const [conversation, setConversation] = useState<
-    Array<{ type: "video" | "text"; content: any }>
-  >([]);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [conversation, setConversation] = useState<ConversationItem[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const startRecording = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -504,17 +444,20 @@ const VideoRecorder = () => {
 
   const handleUpload = async () => {
     if (videoBlob) {
-      // Add video to conversation
+      setIsLoading(true);
       setConversation((prev) => [
         ...prev,
         { type: "video", content: videoBlob },
       ]);
 
       const formData = new FormData();
-      formData.append("video", videoBlob, "video_recording.webm");
+      formData.append("file_content", videoBlob, "video_recording.webm");
+      formData.append("type", "video");
+      formData.append("session_id", "unique_session_id");
+      formData.append("message_number", `${conversation.length + 1}`);
 
       try {
-        const response = await fetch("/api/gemini", {
+        const response = await fetch("http://localhost:8000/api/receive_input", {
           method: "POST",
           body: formData,
         });
@@ -524,22 +467,39 @@ const VideoRecorder = () => {
         }
 
         const data = await response.json();
-        const textResponse = data.textResponse || "No response received.";
+        const textResponse = data.generated_followup_question || "No response received.";
 
-        // Add bot response to conversation
         setConversation((prev) => [
           ...prev,
-          { type: "text", content: textResponse },
+          { type: "bot", content: textResponse },
         ]);
+
+        if (data.terminate_chat) {
+          const diagnosisMessage: Message = {
+            type: "bot",
+            content: `Diagnosis: ${data.diagnosis || "No Diagnosis"}`,
+          };
+          const questionnaireMessage: Message = {
+            type: "bot",
+            content: `Selected Questionnaire: ${
+              data.selected_questionnaire || "None"
+            }`,
+          };
+          setConversation((prev) => [
+            ...prev,
+            diagnosisMessage,
+            questionnaireMessage,
+          ]);
+        }
       } catch (error) {
         console.error("Error uploading video:", error);
         setConversation((prev) => [
           ...prev,
-          { type: "text", content: "Error: Unable to process video." },
+          { type: "bot", content: "Error: Unable to process video. Please try again." },
         ]);
       } finally {
-        // Reset videoBlob to allow another recording
         setVideoBlob(null);
+        setIsLoading(false);
       }
     }
   };
@@ -577,6 +537,7 @@ const VideoRecorder = () => {
         ref={videoRef}
         autoPlay
         className="mb-4 w-full h-auto bg-black"
+        aria-label="Video preview"
       ></video>
 
       <div className="flex justify-center items-center space-x-4">
@@ -584,6 +545,7 @@ const VideoRecorder = () => {
           <button
             onClick={stopRecording}
             className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all flex items-center"
+            aria-label="Stop recording"
           >
             <FaStop className="mr-2" /> Stop Recording
           </button>
@@ -591,6 +553,7 @@ const VideoRecorder = () => {
           <button
             onClick={startRecording}
             className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all flex items-center"
+            aria-label="Start recording"
           >
             <FaPlay className="mr-2" /> Start Recording
           </button>
@@ -601,8 +564,10 @@ const VideoRecorder = () => {
         <button
           onClick={handleUpload}
           className="mt-4 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all flex items-center justify-center"
+          aria-label="Send video"
+          disabled={isLoading}
         >
-          <FaUpload className="mr-2" /> Send Video
+          {isLoading ? <FaSpinner className="animate-spin" /> : <FaUpload className="mr-2" />} Send Video
         </button>
       )}
     </div>
