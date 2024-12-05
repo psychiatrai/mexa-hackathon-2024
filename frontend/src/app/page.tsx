@@ -17,7 +17,8 @@ import {
   FaSpinner,
 } from "react-icons/fa";
 
-export default function Home() {
+export default function Home()
+{
   const [activeInput, setActiveInput] = useState<
     "text" | "audio" | "video" | null
   >(null);
@@ -100,3 +101,20 @@ const Card = ({
   </div>
 );
 
+// 'use client'
+// import GAD7Form from "@/Components/Questionaires/GAD-7 ";
+// import IESRForm from "@/Components/Questionaires/IES-R";
+// import PHQ9Form from "@/Components/Questionaires/PHQ-9";
+// import React from "react";
+
+// const Home: React.FC = () => {
+//   return (
+//     <div>
+//       {/* <PHQ9Form /> */}
+//       {/* <GAD7Form/> */}
+//       <IESRForm/>
+//     </div>
+//   );
+// };
+
+// export default Home;
