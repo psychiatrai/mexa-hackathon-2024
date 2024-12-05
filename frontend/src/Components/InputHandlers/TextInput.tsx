@@ -63,9 +63,11 @@ const TextInput: React.FC = () => {
         throw new Error(
           `Server responded with status ${response.status}: ${errorText}`
         );
+        
       }
 
       const data = await response.json();
+      console.log("Server Response:", data);
 
       const botResponse: Message = {
         type: "bot",
@@ -134,7 +136,9 @@ const TextInput: React.FC = () => {
                 : "bg-gray-300 text-black self-start"
             }`}
           >
-            <p style={{ whiteSpace: "pre-wrap" }}>
+            <p
+              style={{ whiteSpace: "pre-wrap" }}
+            >
               {typeof msg.content === "string"
                 ? msg.content
                 : "Invalid content"}
@@ -194,6 +198,7 @@ const TextInput: React.FC = () => {
 };
 
 export default TextInput;
+
 
 // import { useState, useRef, useEffect } from "react";
 // import { FaPaperPlane, FaSpinner } from "react-icons/fa";

@@ -59,10 +59,10 @@ export default function Home() {
 
         {activeInput && (
           <div className="mt-8">
-            <h3 className="text-2xl font-semibold text-gray-800 mb-4">
-              {activeInput === "text" && "Tell us more in text."}
-              {activeInput === "audio" && "Record your voice."}
-              {activeInput === "video" && "Capture your mood in a video."}
+            <h3 className="text-2xl font-semibold text-center text-gray-800 mb-4">
+              {/* {activeInput === "text" && "Tell us more in text."} */}
+              {/* {activeInput === "audio" && "Record your voice."}
+              {activeInput === "video" && "Capture your mood in a video."} */}
             </h3>
 
             {activeInput === "text" && <TextInput />}
