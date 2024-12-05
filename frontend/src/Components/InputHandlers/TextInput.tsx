@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { FaPaperPlane, FaSpinner } from "react-icons/fa";
+import { v4 as uuidv4 } from "uuid";
 
 interface Message {
   type: "user" | "bot";
@@ -17,8 +18,11 @@ const TextInput: React.FC = () => {
   const [visibleAnalysis, setVisibleAnalysis] = useState<{
     [key: number]: boolean;
   }>({});
+  const [sessionId, setSessionId] = useState<string>(uuidv4());
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  console.log("Unique Session ID:", sessionId);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -36,6 +40,11 @@ const TextInput: React.FC = () => {
       return;
     }
 
+    const userMessageNumber = messages.filter(
+      (msg) => msg.type === "user"
+    ).length;
+    console.log("User Message Number:", userMessageNumber);
+
     setMessages((prevMessages) => [
       ...prevMessages,
       { type: "user", content: text },
@@ -46,8 +55,10 @@ const TextInput: React.FC = () => {
 
     const formData = new FormData();
     formData.append("text_content", text);
-    formData.append("session_id", "unique_session_id");
-    formData.append("message_number", `${messages.length + 1}`);
+    formData.append("session_id", sessionId);
+    formData.append("message_number", `${userMessageNumber}`);
+
+    console.log("Form Data:", Object.fromEntries(formData.entries()));
 
     try {
       const response = await fetch(
@@ -63,11 +74,9 @@ const TextInput: React.FC = () => {
         throw new Error(
           `Server responded with status ${response.status}: ${errorText}`
         );
-        
       }
 
       const data = await response.json();
-      console.log("Server Response:", data);
 
       const botResponse: Message = {
         type: "bot",
@@ -76,6 +85,11 @@ const TextInput: React.FC = () => {
       };
 
       setMessages((prevMessages) => [...prevMessages, botResponse]);
+
+      const botMessageNumber = messages.filter(
+        (msg) => msg.type === "bot"
+      ).length;
+      console.log("Bot Message Number:", botMessageNumber);
 
       if (data.terminate_chat) {
         setMessages((prevMessages) => [
@@ -136,9 +150,7 @@ const TextInput: React.FC = () => {
                 : "bg-gray-300 text-black self-start"
             }`}
           >
-            <p
-              style={{ whiteSpace: "pre-wrap" }}
-            >
+            <p style={{ whiteSpace: "pre-wrap" }}>
               {typeof msg.content === "string"
                 ? msg.content
                 : "Invalid content"}
@@ -198,7 +210,6 @@ const TextInput: React.FC = () => {
 };
 
 export default TextInput;
-
 
 // import { useState, useRef, useEffect } from "react";
 // import { FaPaperPlane, FaSpinner } from "react-icons/fa";
