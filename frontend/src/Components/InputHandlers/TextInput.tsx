@@ -80,7 +80,7 @@ const TextInput: React.FC = () => {
 
       const botResponse: Message = {
         type: "bot",
-        content: data.generated_followup_question,
+        content: data.generated_followup_response,
         analysis: data.generated_analysis,
       };
 
@@ -96,13 +96,12 @@ const TextInput: React.FC = () => {
           ...prevMessages,
           {
             type: "bot",
-            content: `Diagnosis: ${data.diagnosis || "No Diagnosis"}`,
+            content: `Diagnosis: ${data.likely_conditions?.join(", ") || "No Diagnosis"}`,
           },
           {
             type: "bot",
-            content: `Selected Questionnaire: ${
-              data.selected_questionnaire || "None"
-            }`,
+            content: `Selected Questionnaire: ${data.selected_questionnaire || "None"
+              }`,
           },
         ]);
       }
@@ -144,11 +143,10 @@ const TextInput: React.FC = () => {
         {messages.map((msg, index) => (
           <div
             key={index}
-            className={`p-2 rounded-2xl w-max max-w-xs ${
-              msg.type === "user"
-                ? "bg-blue-500 text-white self-end"
-                : "bg-gray-300 text-black self-start"
-            }`}
+            className={`p-2 rounded-2xl w-max max-w-xs ${msg.type === "user"
+              ? "bg-blue-500 text-white self-end"
+              : "bg-gray-300 text-black self-start"
+              }`}
           >
             <p style={{ whiteSpace: "pre-wrap" }}>
               {typeof msg.content === "string"
@@ -191,11 +189,10 @@ const TextInput: React.FC = () => {
         <button
           onClick={handleSubmit}
           disabled={isLoading}
-          className={`absolute right-4 bottom-4 px-4 py-2 rounded-lg flex items-center justify-center transition-all ${
-            isLoading
-              ? "bg-gray-500 cursor-not-allowed"
-              : "bg-blue-500 text-white hover:bg-blue-600"
-          }`}
+          className={`absolute right-4 bottom-4 px-4 py-2 rounded-lg flex items-center justify-center transition-all ${isLoading
+            ? "bg-gray-500 cursor-not-allowed"
+            : "bg-blue-500 text-white hover:bg-blue-600"
+            }`}
           aria-label="Send message"
         >
           {isLoading ? (
