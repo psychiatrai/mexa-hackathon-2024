@@ -1,14 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import {
-  FaPencilAlt,
-  FaMicrophone,
-  FaVideo,
-  FaStop,
-  FaPlay,
-  FaUpload,
-  FaPaperPlane,
-  FaSpinner,
-} from "react-icons/fa";
+import { FaStop, FaPlay, FaUpload, FaSpinner } from "react-icons/fa";
 
 interface Message {
   type: "user" | "bot";
@@ -41,8 +32,8 @@ const VideoRecorder: React.FC = () => {
     const chunks: Blob[] = [];
 
     if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.muted = true;
+      videoRef.current.srcObject = stream;
+      videoRef.current.muted = true;
     }
 
     recorder.ondataavailable = (e) => chunks.push(e.data);
@@ -64,8 +55,8 @@ const VideoRecorder: React.FC = () => {
         const stream = videoRef.current.srcObject as MediaStream;
         const tracks = stream.getTracks();
         tracks.forEach((track) => track.stop());
-          videoRef.current.srcObject = null;
-          videoRef.current.muted = false; 
+        videoRef.current.srcObject = null;
+        videoRef.current.muted = false;
       }
     }
   };

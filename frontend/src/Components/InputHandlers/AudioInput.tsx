@@ -1,14 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import {
-  FaPencilAlt,
-  FaMicrophone,
-  FaVideo,
-  FaStop,
-  FaPlay,
-  FaUpload,
-  FaPaperPlane,
-  FaSpinner,
-} from "react-icons/fa";
+import { FaStop, FaPlay, FaUpload, FaSpinner } from "react-icons/fa";
 
 interface Message {
   type: "user" | "bot";
