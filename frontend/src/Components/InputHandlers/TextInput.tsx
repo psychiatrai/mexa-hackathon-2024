@@ -1,94 +1,209 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { FaPaperPlane, FaSpinner } from "react-icons/fa";
+import { v4 as uuidv4 } from "uuid";
 
-export const ChatInput = ({
-  message,
-}: {
-  message: { type: "user" | "bot"; content: string };
-}) => {
-  return (
-    <div
-      className={`flex ${
-        message.type === "user" ? "justify-end" : "justify-start"
-      } mb-4`}
-    >
-      <div
-        className={`max-w-md p-3 rounded-lg ${
-          message.type === "user"
-            ? "bg-blue-500 text-white"
-            : "bg-gray-300 text-black"
-        }`}
-      >
-        {message.content}
-      </div>
-    </div>
-  );
-};
+interface Message {
+  type: "user" | "bot";
+  content: string | Blob;
+  analysis?: string;
+}
+type ConversationItem =
+  | Message
+  | { type: "audio" | "video" | "text"; content: any };
 
-export const MessageInput = ({
-  value,
-  onChange,
-  onSend,
-}: {
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onSend: () => void;
-}) => {
-  return (
-    <div className="flex w-full">
-      <input
-        type="text"
-        value={value}
-        onChange={onChange}
-        placeholder="Type a message..."
-        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none"
-      />
-      <button
-        onClick={onSend}
-        className="ml-3 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-      >
-        Send
-      </button>
-    </div>
-  );
-};
+const TextInput: React.FC = () => {
+  const [text, setText] = useState<string>("");
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [visibleAnalysis, setVisibleAnalysis] = useState<{
+    [key: number]: boolean;
+  }>({});
+  const [sessionId, setSessionId] = useState<string>(uuidv4());
 
-export const TextInputComponent = () => {
-  const [messages, setMessages] = useState<
-    { type: "user" | "bot"; content: string }[]
-  >([]);
-  const [currentInput, setCurrentInput] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleSend = () => {
-    if (currentInput.trim()) {
-      setMessages((prev) => [...prev, { type: "user", content: currentInput }]);
-      setTimeout(() => {
-        setMessages((prev) => [
-          ...prev,
-          { type: "user", content: currentInput },
-          { type: "bot", content: "This is a sample response." },
-        ]);
-      }, 1000);
-      setCurrentInput("");
+  console.log("Unique Session ID:", sessionId);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
     }
   };
 
+  const handleSubmit = async () => {
+    if (!text.trim()) {
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { type: "bot", content: "Please enter some text." },
+      ]);
+      return;
+    }
+
+    const userMessageNumber = messages.filter(
+      (msg) => msg.type === "user"
+    ).length;
+    console.log("User Message Number:", userMessageNumber);
+
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      { type: "user", content: text },
+    ]);
+
+    setText("");
+    setIsLoading(true);
+
+    const formData = new FormData();
+    formData.append("text_content", text);
+    formData.append("session_id", sessionId);
+    formData.append("message_number", `${userMessageNumber}`);
+
+    console.log("Form Data:", Object.fromEntries(formData.entries()));
+
+    try {
+      const response = await fetch(
+        `http://localhost:8000/api/receive_input?type=text`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Server responded with status ${response.status}: ${errorText}`
+        );
+      }
+
+      const data = await response.json();
+
+      const botResponse: Message = {
+        type: "bot",
+        content: data.generated_followup_response,
+        analysis: data.generated_analysis,
+      };
+
+      setMessages((prevMessages) => [...prevMessages, botResponse]);
+
+      const botMessageNumber = messages.filter(
+        (msg) => msg.type === "bot"
+      ).length;
+      console.log("Bot Message Number:", botMessageNumber);
+
+      if (data.terminate_chat) {
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          {
+            type: "bot",
+            content: `Diagnosis: ${data.likely_conditions?.join(", ") || "No Diagnosis"}`,
+          },
+          {
+            type: "bot",
+            content: `Selected Questionnaire: ${data.selected_questionnaire || "None"
+              }`,
+          },
+        ]);
+      }
+    } catch (error: any) {
+      console.error("Error fetching from server:", error.message);
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        {
+          type: "bot",
+          content: `Error: Unable to process your input. Please try again. Details: ${error.message}`,
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleToggleAnalysis = (index: number) => {
+    setVisibleAnalysis((prev) => ({
+      ...prev,
+      [index]: !prev[index],
+    }));
+  };
+
+  useEffect(() => {
+    setMessages([{ type: "bot", content: "Hey! How are you feeling today?" }]);
+  }, []);
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [text]);
+
   return (
-    <div className="flex flex-col w-full h-full">
-      {/* Chat window */}
-      <div className="flex-1 overflow-y-auto p-4">
-        {messages.map((message, index) => (
-          <ChatInput key={index} message={message} />
+    <div className="flex flex-col gap-4 items-center w-full">
+      <div className="flex flex-col space-y-4 w-full">
+        {messages.map((msg, index) => (
+          <div
+            key={index}
+            className={`p-2 rounded-2xl w-max max-w-xs ${msg.type === "user"
+              ? "bg-blue-500 text-white self-end"
+              : "bg-gray-300 text-black self-start"
+              }`}
+          >
+            <p style={{ whiteSpace: "pre-wrap" }}>
+              {typeof msg.content === "string"
+                ? msg.content
+                : "Invalid content"}
+            </p>
+            {msg.analysis && (
+              <div className="mt-2 border-t pt-2">
+                <div className="flex justify-between items-center">
+                  <button
+                    onClick={() => handleToggleAnalysis(index)}
+                    className="text-lg text-blue-500 hover:text-blue-600"
+                  >
+                    {visibleAnalysis[index] ? "Hide Analysis" : "Show Analysis"}
+                  </button>
+                </div>
+                {visibleAnalysis[index] && (
+                  <p className="mt-2 text-sm italic text-gray-600">
+                    <strong>Analysis: </strong>
+                    {msg.analysis}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         ))}
       </div>
 
-      {/* Message Input */}
-      <div className="flex p-4 border-t border-gray-300">
-        <MessageInput
-          value={currentInput}
-          onChange={(e) => setCurrentInput(e.target.value)}
-          onSend={handleSend}
+      <div className="relative w-full">
+        <textarea
+          ref={textareaRef}
+          className="w-full border rounded-lg p-4 bg-white text-black shadow-sm focus:ring-2 focus:ring-blue-400 focus:outline-none resize-none overflow-hidden"
+          placeholder="Type here..."
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={handleKeyDown}
+          disabled={isLoading}
+          aria-label="Text input"
         />
+        <button
+          onClick={handleSubmit}
+          disabled={isLoading}
+          className={`absolute right-4 bottom-4 px-4 py-2 rounded-lg flex items-center justify-center transition-all ${isLoading
+            ? "bg-gray-500 cursor-not-allowed"
+            : "bg-blue-500 text-white hover:bg-blue-600"
+            }`}
+          aria-label="Send message"
+        >
+          {isLoading ? (
+            <FaSpinner className="animate-spin" />
+          ) : (
+            <FaPaperPlane className="text-xl" />
+          )}
+        </button>
       </div>
     </div>
   );
 };
+
+export default TextInput;
