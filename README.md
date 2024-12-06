@@ -4,28 +4,35 @@
 
 Ensure you have the following installed on your system:
 
-- **Node.js** (version 16 or higher)
+- **Node.js**
 - **npm** or **yarn**
-- **Python** (version 3.8 or higher)
+- **Python**
 - **pip**
-- **Git**
 
 ## Running the Project
 
 ### Backend
 
+
+0. In the project root directory, create a file  `secrets.env` and add the following environment variables:
+   ```env
+   GEMINI_API_KEY=your_api_key
+   ```
 1. Navigate to the `backend` directory:
    ```bash
    cd backend
    ```
-2. Install dependencies:
+2. Ideally create and activate a virtual environment
+3. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
 3. Start the server:
    ```bash
-   uvicorn main:app --reload
+   fastapi dev src/app.py
    ```
+
+The backend application Swagger docs will be available at [http://localhost:8000](http://localhost:8000)
 
 ### Frontend
 
@@ -50,5 +57,4 @@ Ensure you have the following installed on your system:
    yarn dev
    ```
 
-The application will be available at [http://localhost:3000](http://localhost:3000).
-
+The frontend application will be available at [http://localhost:3000](http://localhost:3000)
