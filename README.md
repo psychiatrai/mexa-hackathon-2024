@@ -14,20 +14,20 @@ Ensure you have the following installed on your system:
 ### Backend
 
 
-0. In the project root directory, create a file  `secrets.env` and add the following environment variables:
-   ```env
-   GEMINI_API_KEY=your_api_key
-   ```
 1. Navigate to the `backend` directory:
    ```bash
    cd backend
    ```
-2. Ideally create and activate a virtual environment
-3. Install dependencies:
+2. In the backend directory, create a file  `secrets.env` and add the following environment variables:
+   ```env
+   GEMINI_API_KEY=your_api_key
+   ```
+3. Ideally create and activate a virtual environment
+4. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
-3. Start the server:
+5. Start the server:
    ```bash
    fastapi dev src/app.py
    ```
