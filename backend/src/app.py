@@ -231,8 +231,8 @@ async def receive_input(
 
         estimated_scores_output = model.generate_content(text_to_estimate_scores)
         print(estimated_scores_output.text)
-        estimated_scores = json.loads(estimated_scores_output.text)
-        output_response["estimated_questionnaire_scores"] = estimated_scores
+        # estimated_scores = json.loads(estimated_scores_output.text)
+        # output_response["estimated_questionnaire_scores"] = estimated_scores
 
     print(output_response)
 
