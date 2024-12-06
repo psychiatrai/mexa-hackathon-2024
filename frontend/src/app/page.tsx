@@ -26,10 +26,10 @@ export default function Home()
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 flex flex-col items-center p-8">
       <header className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-gray-800 mb-2">Psychiatrai</h1>
+        <h1 className="text-4xl font-bold text-gray-800 mb-2">psychiatrai</h1>
         <p className="text-lg text-gray-600">
-          Welcome to PsychiatraiBot, your trusted companion for mental health
-          and well-being support!
+          Welcome to psychiatrai Mental health measurement bot!
+        !
         </p>
       </header>
 
@@ -38,21 +38,21 @@ export default function Home()
           <Card
             icon={<FaPencilAlt />}
             title="Text Input"
-            description="Write down your thoughts and feelings."
+            description="Write down your thoughts and feelings"
             onClick={() => setActiveInput("text")}
             isActive={activeInput === "text"}
           />
           <Card
             icon={<FaMicrophone />}
             title="Audio Input"
-            description="Speak and let your voice express your mood."
+            description="Use voice mode for more interactivity"
             onClick={() => setActiveInput("audio")}
             isActive={activeInput === "audio"}
           />
           <Card
             icon={<FaVideo />}
             title="Video Input"
-            description="Share a video for a more personal touch."
+            description="Use video mode for the best results"
             onClick={() => setActiveInput("video")}
             isActive={activeInput === "video"}
           />
@@ -61,9 +61,6 @@ export default function Home()
         {activeInput && (
           <div className="mt-8">
             <h3 className="text-2xl font-semibold text-center text-gray-800 mb-4">
-              {/* {activeInput === "text" && "Tell us more in text."} */}
-              {/* {activeInput === "audio" && "Record your voice."}
-              {activeInput === "video" && "Capture your mood in a video."} */}
             </h3>
 
             {activeInput === "text" && <TextInput />}
@@ -110,9 +107,9 @@ const Card = ({
 // const Home: React.FC = () => {
 //   return (
 //     <div>
-//       {/* <PHQ9Form /> */}
+//       <PHQ9Form />
 //       {/* <GAD7Form/> */}
-//       <IESRForm/>
+//       {/* <IESRForm/> */}
 //     </div>
 //   );
 // };
