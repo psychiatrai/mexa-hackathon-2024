@@ -35,8 +35,28 @@ class GenerationSchema(TypedDict):
     generated_analysis: Optional[str]
     generated_followup_response: str
     generated_explanation: Optional[str]
-    likely_conditions: Optional[List[Literal["Depression", "Anxiety", "Trauma", "OCD", "Bipolar Disorder", "Substance Abuse", "Anger", "Sleep Disorder", "Suicide", "Other", "No Condition"]]]
-    selected_questionnaire: Optional[Literal["PHQ-9", "GAD-7", "IES-R", "Y-BOCS", "MDQ", "DAST", "CAS", "SDQ", "SAFES"]]
+    likely_conditions: Optional[
+        List[
+            Literal[
+                "Depression",
+                "Anxiety",
+                "Trauma",
+                "OCD",
+                "Bipolar Disorder",
+                "Substance Abuse",
+                "Anger",
+                "Sleep Disorder",
+                "Suicide",
+                "Other",
+                "No Condition",
+            ]
+        ]
+    ]
+    selected_questionnaire: Optional[
+        Literal[
+            "PHQ-9", "GAD-7", "IES-R", "Y-BOCS", "MDQ", "DAST", "CAS", "SDQ", "SAFES"
+        ]
+    ]
     estimated_questionnaire_scores: Optional[Dict[str, str]]
     estimated_questionnaire_scores: Optional[str]
     terminate_chat: Optional[bool]
@@ -49,7 +69,7 @@ generation_config = genai.GenerationConfig(
 
 class OutputModel(GenerationSchema):
     type: Literal["text", "audio"]
-    
+
 
 initial_prompt_prefix: str = """
     You are a clinical psychologist specializating in mental health mesaurement. Your goal is to give a possible set of initial screening along with its severity, within a maximum of 10 questions (think of it as a short session).
@@ -118,7 +138,10 @@ prompt_suffix: str = """
     Please rememeber that you can ask a maximum of 10 questions.
     """
 
-initial_prompt_text: str =  f"{initial_prompt_prefix}. The user has responsed PLACEHOLDER_TEXT_INITIAL_RESPONSE to this. {prompt_suffix}."""
+initial_prompt_text: str = (
+    f"{initial_prompt_prefix}. The user has responsed PLACEHOLDER_TEXT_INITIAL_RESPONSE to this. {prompt_suffix}."
+    ""
+)
 initial_prompt_audio: str = f"{initial_prompt_prefix}. The user has responsed with the attached audio to this. {prompt_suffix}"
 initial_prompt_video: str = f"{initial_prompt_prefix}. The user has responsed with the attached video to this. At this point, you have asked 1 question. {prompt_suffix}"
 
@@ -161,14 +184,22 @@ async def receive_input(
 
     if type == "text":
         if message_number == 0:
-            initial_prompt = initial_prompt_text.replace("PLACEHOLDER_TEXT_INITIAL_RESPONSE", f'"{text_content}"')
-            initial_prompt += f"At this point, you have asked {message_number + 1} questions."
+            initial_prompt = initial_prompt_text.replace(
+                "PLACEHOLDER_TEXT_INITIAL_RESPONSE", f'"{text_content}"'
+            )
+            initial_prompt += (
+                f"At this point, you have asked {message_number + 1} questions."
+            )
             session_message_history.append(initial_prompt)
         elif message_number > 0:
-            answer_received = second_and_later_prompts_part_2.replace("PLACEHOLDER_TEXT_LATER_RESPONSE", f'{text_content}')
-            later_prompt_suffix = answer_received.replace("PLACEHOLDER_TEXT_NUM_QUESTIONS", f'{message_number + 1}')
+            answer_received = second_and_later_prompts_part_2.replace(
+                "PLACEHOLDER_TEXT_LATER_RESPONSE", f"{text_content}"
+            )
+            later_prompt_suffix = answer_received.replace(
+                "PLACEHOLDER_TEXT_NUM_QUESTIONS", f"{message_number + 1}"
+            )
             session_message_history.append(later_prompt_suffix)
-        
+
         content_to_send = ("\n").join(session_message_history)
         response = model.generate_content(
             content_to_send,
@@ -196,28 +227,47 @@ async def receive_input(
     if message_number > 0:
         followup_response = structured_response.get("generated_followup_response", None)
         if followup_response:
-            followup_response_asked = second_and_later_prompts_part_1.replace("PLACEHOLDER_TEXT_FOLLOWUP_RESPONSE", f'{followup_response}')
+            followup_response_asked = second_and_later_prompts_part_1.replace(
+                "PLACEHOLDER_TEXT_FOLLOWUP_RESPONSE", f"{followup_response}"
+            )
             session_message_history.append(followup_response_asked)
 
     should_terminate = structured_response.get("terminate_chat", False)
-    estimated_questionnaire_scores = structured_response.get("estimated_questionnaire_scores", None)
+    estimated_questionnaire_scores = structured_response.get(
+        "estimated_questionnaire_scores", None
+    )
 
     output_response = OutputModel(
         type="text",
         generated_analysis=structured_response.get("generated_analysis", None),
-        generated_followup_response=structured_response.get("generated_followup_response", None),
+        generated_followup_response=structured_response.get(
+            "generated_followup_response", None
+        ),
         generated_explanation=structured_response.get("generated_explanation", None),
         likely_conditions=structured_response.get("likely_conditions", None),
         selected_questionnaire=structured_response.get("selected_questionnaire", None),
         estimated_questionnaire_scores=estimated_questionnaire_scores,
-        terminate_chat=should_terminate
+        terminate_chat=should_terminate,
     )
 
     if should_terminate and not estimated_questionnaire_scores:
-        text_for_session = ("\n").join(session_message_history).replace(initial_prompt_prefix, "").replace(prompt_suffix, "")
-        text_to_estimate_scores = generate_estimated_scores_prompt.replace("PLACEHOLDER_TEXT_MESSAGE_HISTORY", text_for_session)
-        text_to_estimate_scores = text_to_estimate_scores.replace("PLACEHOLDER_TEXT_LIKELY_CONDITIONS", str(output_response["likely_conditions"]))
-        text_to_estimate_scores = text_to_estimate_scores.replace("PLACEHOLDER_TEXT_SELECTED_QUESTIONNAIRE", str(output_response["selected_questionnaire"]))
+        text_for_session = (
+            ("\n")
+            .join(session_message_history)
+            .replace(initial_prompt_prefix, "")
+            .replace(prompt_suffix, "")
+        )
+        text_to_estimate_scores = generate_estimated_scores_prompt.replace(
+            "PLACEHOLDER_TEXT_MESSAGE_HISTORY", text_for_session
+        )
+        text_to_estimate_scores = text_to_estimate_scores.replace(
+            "PLACEHOLDER_TEXT_LIKELY_CONDITIONS",
+            str(output_response["likely_conditions"]),
+        )
+        text_to_estimate_scores = text_to_estimate_scores.replace(
+            "PLACEHOLDER_TEXT_SELECTED_QUESTIONNAIRE",
+            str(output_response["selected_questionnaire"]),
+        )
 
         text_to_estimate_scores += """
             \n
